@@ -1,4 +1,3 @@
-# README.md
 # 💬💰 WhatsApp Thrift Bot
 
 A fully automated WhatsApp bot that manages thrift (ajo/esusu) contributions and payouts using Node.js, MongoDB, and WhatsApp Business API. Built for savings groups to automate deposits, withdrawals, contribution tracking, group management, and rotation logic — all via WhatsApp chat.
@@ -246,4 +245,391 @@ curl -X POST https://yourdomain.com/webhook \
 Edit `services/paymentService.js` and add bank codes to `getBankCode()` method.
 
 ### Custom Commands
-Add new message handlers in `services/messageHandler
+Add new message handlers in `services/messageHandler.js`:
+
+```javascript
+// In handleMessage method, add new command
+else if (command.startsWith('/your_command')) {
+  await this.handleYourCommand(from, messageBody, user);
+}
+
+// Add the handler method
+async handleYourCommand(from, messageBody, user) {
+  // Your custom logic here
+  await whatsappService.sendMessage(from, "Your response");
+}
+```
+
+### Different Payment Providers
+Modify `services/paymentService.js` to integrate with other providers like Flutterwave, Stripe, etc.
+
+### Custom Rotation Logic
+Edit `services/rotationService.js` to implement different rotation algorithms (random, priority-based, etc.).
+
+## 📚 API Documentation
+
+### Webhook Endpoints
+
+#### WhatsApp Webhook
+```
+GET  /webhook - Verify webhook with WhatsApp
+POST /webhook - Receive WhatsApp messages
+```
+
+#### Payment Webhook  
+```
+POST /webhook/payment - Process payment confirmations
+```
+
+#### Health Check
+```
+GET /health - Server status and uptime
+```
+
+### Database Collections
+
+#### Users Collection
+```javascript
+{
+  _id: ObjectId,
+  whatsappId: "2347012345678",
+  phoneNumber: "+2347012345678", 
+  name: "John Doe",
+  email: "john@email.com",
+  bankDetails: {
+    accountNumber: "1234567890",
+    bankName: "Access Bank",
+    accountName: "JOHN DOE"
+  },
+  groups: [ObjectId],
+  balance: 50000,
+  isActive: true,
+  registeredAt: Date,
+  lastActivity: Date
+}
+```
+
+#### Groups Collection
+```javascript
+{
+  _id: ObjectId,
+  name: "Office Savings",
+  description: "Monthly office thrift",
+  contributionAmount: 10000,
+  frequency: "weekly",
+  maxMembers: 12,
+  members: [{
+    user: ObjectId,
+    joinedAt: Date,
+    isActive: true
+  }],
+  creator: ObjectId,
+  currentCycle: 1,
+  startDate: Date,
+  isActive: true,
+  totalContributions: 120000
+}
+```
+
+#### Contributions Collection
+```javascript
+{
+  _id: ObjectId,
+  user: ObjectId,
+  group: ObjectId,
+  amount: 10000,
+  cycle: 1,
+  week: 3,
+  transactionReference: "THR_1699123456_A1B2",
+  paymentMethod: "bank_transfer",
+  status: "confirmed",
+  paidAt: Date,
+  createdAt: Date
+}
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+#### 1. WhatsApp Messages Not Received
+```bash
+# Check webhook URL is accessible
+curl https://yourdomain.com/webhook
+
+# Verify WhatsApp webhook subscription
+# Check Facebook Developer Console logs
+
+# Ensure SSL certificate is valid
+openssl s_client -connect yourdomain.com:443
+```
+
+#### 2. Payment Webhooks Failing
+```bash
+# Check Paystack webhook logs in dashboard
+# Verify webhook signature validation
+# Test webhook endpoint manually:
+
+curl -X POST https://yourdomain.com/webhook/payment \
+  -H "Content-Type: application/json" \
+  -H "x-paystack-signature: test" \
+  -d '{"event":"charge.success","data":{"reference":"test"}}'
+```
+
+#### 3. Database Connection Issues
+```bash
+# Check MongoDB is running
+sudo systemctl status mongod
+
+# Test connection
+mongosh "mongodb://localhost:27017/whatsapp-thrift-bot"
+
+# For MongoDB Atlas, check IP whitelist and connection string
+```
+
+#### 4. Bot Not Responding
+```bash
+# Check PM2 status
+pm2 status
+
+# View logs
+pm2 logs thrift-bot
+
+# Restart bot
+pm2 restart thrift-bot
+```
+
+### Debug Mode
+
+Enable detailed logging by setting `LOG_LEVEL=debug` in your `.env` file:
+
+```env
+LOG_LEVEL=debug
+```
+
+## 🔍 Testing Guide
+
+### Manual Testing Checklist
+
+#### User Registration
+- [ ] Send `/start` command
+- [ ] Register with `/register John Doe john@email.com`
+- [ ] Check `/profile` shows correct info
+- [ ] Verify user created in database
+
+#### Group Management
+- [ ] Create group with `/create_group TestGroup 5000 5`
+- [ ] Join group with group ID
+- [ ] List groups with `/groups`
+- [ ] Check group info with database
+
+#### Contributions
+- [ ] Make contribution with `/contribute GROUP_ID 5000`
+- [ ] Receive bank details
+- [ ] Simulate payment webhook
+- [ ] Verify contribution confirmed
+- [ ] Check payout processed when all members contribute
+
+### Automated Testing
+
+```javascript
+// tests/integration.test.js
+const request = require('supertest');
+const app = require('../server');
+
+describe('Webhook Endpoints', () => {
+  test('WhatsApp webhook verification', async () => {
+    const response = await request(app)
+      .get('/webhook')
+      .query({
+        'hub.mode': 'subscribe',
+        'hub.verify_token': process.env.WHATSAPP_VERIFY_TOKEN,
+        'hub.challenge': 'test_challenge'
+      });
+    
+    expect(response.status).toBe(200);
+    expect(response.text).toBe('test_challenge');
+  });
+
+  test('Health check endpoint', async () => {
+    const response = await request(app).get('/health');
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('OK');
+  });
+});
+```
+
+Run tests:
+```bash
+npm test
+```
+
+## 📈 Performance Optimization
+
+### Database Optimization
+```javascript
+// Add indexes for better query performance
+// In MongoDB shell:
+
+// User queries
+db.users.createIndex({ "whatsappId": 1 })
+db.users.createIndex({ "email": 1 })
+
+// Contribution queries
+db.contributions.createIndex({ 
+  "user": 1, "group": 1, "cycle": 1, "week": 1 
+})
+
+// Transaction queries
+db.transactions.createIndex({ "reference": 1 })
+db.transactions.createIndex({ "user": 1, "createdAt": -1 })
+```
+
+### Rate Limiting Configuration
+```javascript
+// Adjust rate limiting in server.js
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // Increase for high-traffic bots
+  message: "Too many requests, please try again later"
+});
+```
+
+### Caching Strategy
+```javascript
+// Add Redis for session caching (optional)
+const redis = require('redis');
+const client = redis.createClient();
+
+// Cache user sessions
+async function getCachedUser(whatsappId) {
+  const cached = await client.get(`user:${whatsappId}`);
+  return cached ? JSON.parse(cached) : null;
+}
+```
+
+## 🌍 Multi-Country Support
+
+### Currency Configuration
+```javascript
+// utils/currency.js
+const currencies = {
+  'NG': { code: 'NGN', symbol: '₦' },
+  'GH': { code: 'GHS', symbol: '₵' },
+  'KE': { code: 'KES', symbol: 'KSh' }
+};
+
+function formatCurrency(amount, country = 'NG') {
+  const currency = currencies[country];
+  return new Intl.NumberFormat(`en-${country}`, {
+    style: 'currency',
+    currency: currency.code
+  }).format(amount);
+}
+```
+
+### Payment Provider Integration
+```javascript
+// services/paymentProviders/
+├── paystack.js      // Nigeria
+├── flutterwave.js   // Multi-country
+├── stripe.js        // Global
+└── factory.js       // Provider selection logic
+```
+
+## 🚀 Advanced Features
+
+### Analytics Dashboard
+Create a web dashboard to view:
+- Total contributions per group
+- User activity statistics  
+- Payment success rates
+- Group performance metrics
+
+### SMS Notifications
+Integrate with SMS providers for backup notifications:
+```javascript
+// services/smsService.js
+const twilio = require('twilio');
+
+class SMSService {
+  async sendSMS(phoneNumber, message) {
+    // Implementation
+  }
+}
+```
+
+### Multi-language Support
+```javascript
+// utils/localization.js
+const messages = {
+  en: {
+    welcome: "Welcome to Thrift Bot!",
+    contribution_confirmed: "Contribution confirmed!"
+  },
+  yo: {
+    welcome: "Ku abo si Thrift Bot!",
+    contribution_confirmed: "Ifasilẹ ti wa ni idanimo!"
+  }
+};
+```
+
+## 📞 Support & Community
+
+### Getting Help
+- **Documentation**: Check this README first
+- **Issues**: Create GitHub issues for bugs
+- **Discussions**: Use GitHub Discussions for questions
+- **Email**: support@yourcompany.com
+
+### Contributing
+1. Fork the repository
+2. Create feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open Pull Request
+
+### Roadmap
+- [ ] Web dashboard for group management
+- [ ] Mobile app companion
+- [ ] Multi-currency support
+- [ ] Smart contracts integration
+- [ ] AI-powered financial insights
+- [ ] Voice message support
+- [ ] Group chat features
+- [ ] Loan management system
+
+## 📄 License
+
+MIT License - see LICENSE file for details.
+
+## ⚠️ Important Notes
+
+### Security Reminders
+- **Never commit `.env` files** to version control
+- **Use strong JWT secrets** (minimum 32 characters)
+- **Enable 2FA** on all service accounts (Facebook, Paystack, etc.)
+- **Regularly rotate API keys** and webhook secrets
+- **Monitor logs** for suspicious activity
+
+### Legal Compliance
+- Ensure compliance with local financial regulations
+- Implement proper KYC (Know Your Customer) procedures
+- Maintain audit trails for all transactions
+- Consider data privacy laws (GDPR, etc.)
+
+### Production Checklist
+- [ ] SSL certificate configured and auto-renewing
+- [ ] Database backups scheduled
+- [ ] Monitoring and alerting set up
+- [ ] Rate limiting properly configured
+- [ ] Error tracking implemented
+- [ ] Load balancing for high traffic
+- [ ] Security headers configured
+- [ ] API rate limits respected
+
+---
+
+**Built with ❤️ for the African fintech ecosystem**
+
+*This bot helps communities save money together through automated thrift management. Perfect for workplaces, families, and community groups who want to pool resources and support each other financially.*

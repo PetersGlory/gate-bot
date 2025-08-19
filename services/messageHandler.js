@@ -8,6 +8,7 @@ const logger = require('../utils/logger');
 class MessageHandler {
   async processMessage(from, messageBody, messageData) {
     try {
+      console.log("this is the messageBody: ", messageBody);
       const command = messageBody.toLowerCase().trim();
       
       // Get or create user session

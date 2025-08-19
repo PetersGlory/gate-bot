@@ -11,6 +11,8 @@ class WebhookController {
       const token = req.query['hub.verify_token'];
       const challenge = req.query['hub.challenge'];
 
+      console.log("verifying webhook")
+
       if (mode === 'subscribe' && token === process.env.WHATSAPP_VERIFY_TOKEN) {
         logger.info('WhatsApp webhook verified successfully');
         res.status(200).send(challenge);
@@ -29,6 +31,7 @@ class WebhookController {
     try {
       const body = req.body;
 
+      console.log("this is the body:", body);
       if (body.object === 'whatsapp_business_account') {
         if (body.entry && body.entry[0] && body.entry[0].changes && body.entry[0].changes[0]) {
           const change = body.entry[0].changes[0];
