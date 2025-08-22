@@ -108,9 +108,9 @@ class ThriftService {
   generateBankDetails(reference, amount) {
     // In a real implementation, you'd integrate with your payment provider
     return {
-      bankName: "First Bank of Nigeria",
-      accountNumber: "1234567890", // Dynamic account number based on reference
-      accountName: "THRIFT BOT COLLECTIONS",
+      bankName: "Gtbank",
+      accountNumber: "9002823739",
+      accountName: "Lotus Tech Ltd",
       reference: reference,
       amount: amount
     };

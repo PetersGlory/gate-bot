@@ -60,5 +60,5 @@ app.use((error, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-  logger.info(`WhatsApp Thrift Bot server running on port ${PORT}`);
+  logger.info(`WhatsApp GATE Africa Bot server running on port ${PORT}`);
 });

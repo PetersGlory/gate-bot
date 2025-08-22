@@ -64,7 +64,7 @@ class MessageHandler {
 
   async handleStart(from) {
     const welcomeMessage = `
-🌟 *Welcome to Thrift Bot!* 🌟
+🌟 *Welcome to GATE Africa!* 🌟
 
 I help you manage your savings groups (ajo/esusu) right here on WhatsApp!
 
