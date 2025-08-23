@@ -16,7 +16,7 @@ class MessageHandler {
       
       if (!user && !command.startsWith('/start') && !command.startsWith('/register')) {
         await whatsappService.sendMessage(from, 
-          "Welcome! 👋 Please register first by typing: /register <your_name> <your_email>"
+          "👋 Welcome to GATE Africa!\n\nTo get started, please register by typing:\n/register <your_name> <your_email>\n\nExample: /register John Doe john@email.com\n\nNeed help? Type /help to see available commands."
         );
         return;
       }
@@ -41,6 +41,8 @@ class MessageHandler {
         await this.handleJoinGroup(from, messageBody, user);
       } else if (command.startsWith('/groups')) {
         await this.handleListGroups(from, user);
+      } else if (command.startsWith('/group_details')) {
+        await this.handleGroupDetails(from, messageBody, user);
       } else if (command.startsWith('/contribute')) {
         await this.handleContribute(from, messageBody, user);
       } else if (command.startsWith('/balance')) {
@@ -51,7 +53,7 @@ class MessageHandler {
         await this.handleStatus(from);
       } else {
         await whatsappService.sendMessage(from, 
-          "I didn't understand that command. Type /help to see available commands."
+          "❓ Sorry, I didn't recognize that command.\n\nType /help to see a list of available commands."
         );
       }
     } catch (error) {
@@ -147,6 +149,7 @@ Type /help for all commands.
 /create_group <name> <amount> <max_members> - Create group
 /join_group <group_id> - Join a group
 /groups - List your groups
+/group_details <group_id> - View group details
 
 *💰 Contributions:*
 /contribute <group_id> <amount> - Make contribution
@@ -296,6 +299,7 @@ ${user.bankDetails.accountNumber ?
       
       userWithGroups.groups.forEach((group, index) => {
         groupsMessage += `${index + 1}. *${group.name}*\n`;
+        groupsMessage += `   🆔 Group ID: ${group._id}\n`;
         groupsMessage += `   💰 ₦${group.contributionAmount.toLocaleString()} per contribution\n`;
         groupsMessage += `   👤 ${group.members.length}/${group.maxMembers} members\n`;
         groupsMessage += `   🔄 Cycle ${group.currentCycle}\n`;
@@ -306,6 +310,43 @@ ${user.bankDetails.accountNumber ?
     } catch (error) {
       logger.error('List groups error:', error);
       await whatsappService.sendMessage(from, "Error retrieving groups.");
+    }
+  }
+
+  async handleGroupDetails(from, messageBody, user) {
+    try {
+      const parts = messageBody.split(' ');
+      if (parts.length !== 2) {
+        await whatsappService.sendMessage(from, 
+          "Format: /group_details <group_id>\nExample: /group_details 64a1b2c3d4e5f6789012345"
+        );
+        return;
+      }
+
+      const groupId = parts[1];
+      const group = await Group.findById(groupId);
+
+      if (!group) {
+        await whatsappService.sendMessage(from, "Group not found. Please check the Group ID.");
+        return;
+      } 
+      const detailsMessage = `
+🔍 *Group Details:*
+
+*Name:* ${group.name}
+*Contribution Amount:* ₦${group.contributionAmount.toLocaleString()}
+*Max Members:* ${group.maxMembers}
+*Members:* ${group.members.length}/${group.maxMembers}
+*Cycle:* ${group.currentCycle}
+*Started:* ${group.startDate.toDateString()}
+
+${group.members.map(member => `👤 ${member.user.name} (${member.user.phoneNumber})`).join('\n')}
+      `;
+
+      await whatsappService.sendMessage(from, detailsMessage);
+    } catch (error) {
+      logger.error('Group details error:', error);
+      await whatsappService.sendMessage(from, "Error retrieving group details.");
     }
   }
 
