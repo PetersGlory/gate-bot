@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const cron = require('node-cron');
 const logger = require('./utils/logger');
 const webhookRoutes = require('./routes/webhookRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 const { processRotations } = require('./services/rotationService');
 
 const app = express();
@@ -37,6 +38,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 
 // Routes
 app.use('/webhook', webhookRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

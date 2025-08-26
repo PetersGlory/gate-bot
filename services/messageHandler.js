@@ -51,7 +51,9 @@ class MessageHandler {
         await this.handleTransactions(from, user);
       } else if (command.startsWith('/status')) {
         await this.handleStatus(from);
-      } else {
+      } else if (command.startsWith('/developer')) {
+        await this.handleDeveloper(from);
+      }  else {
         await whatsappService.sendMessage(from, 
           "❓ Sorry, I didn't recognize that command.\n\nType /help to see a list of available commands."
         );
@@ -138,28 +140,27 @@ Type /help for all commands.
 
   async handleHelp(from) {
     const helpMessage = `
-📋 *Available Commands:*
+      📋 *Available Commands:*
 
-*🔐 Account:*
-/register <name> <email> - Register your account
-/profile - View your profile
-/balance - Check your balance
+      *🔐 Account:*
+      /register <name> <email> - Register your account
+      /profile - View your profile
+      /balance - Check your balance
 
-*👥 Groups:*
-/create_group <name> <amount> <max_members> - Create group
-/join_group <group_id> - Join a group
-/groups - List your groups
-/group_details <group_id> - View group details
+      *👥 Groups:*
+      /create_group <name> <amount> <max_members> - Create group
+      /join_group <group_name> - Join a group
+      /groups - List your groups
+      /group_details <group_name> - View group details
 
-*💰 Contributions:*
-/contribute <group_id> <amount> - Make contribution
-/transactions - View transaction history
+      *💰 Contributions:*
+      /contribute <group_name> <amount> - Make contribution
+      /transactions - View transaction history
 
-*ℹ️ Information:*
-/status - Check bot status
-/help - Show this help message
+      *ℹ️ Information:*
+      /help - Show this help message
 
-Need help? Contact support!
+      Need help? Contact support!
     `;
     
     await whatsappService.sendMessage(from, helpMessage);
@@ -175,19 +176,19 @@ Need help? Contact support!
       }
 
       const profileMessage = `
-👤 *Your Profile:*
+        👤 *Your Profile:*
 
-*Name:* ${user.name}
-*Email:* ${user.email}
-*Phone:* ${user.phoneNumber}
-*Balance:* ₦${user.balance.toLocaleString()}
-*Groups:* ${user.groups.length}
-*Registered:* ${user.registeredAt.toDateString()}
+        *Name:* ${user.name}
+        *Email:* ${user.email}
+        *Phone:* ${user.phoneNumber}
+        *Balance:* ₦${user.balance.toLocaleString()}
+        *Groups:* ${user.groups.length}
+        *Registered:* ${user.registeredAt.toDateString()}
 
-${user.bankDetails.accountNumber ? 
-  `*Bank Details:*\nAccount: ${user.bankDetails.accountNumber}\nBank: ${user.bankDetails.bankName}\nName: ${user.bankDetails.accountName}` : 
-  'No bank details added yet.'
-}
+        ${user.bankDetails.accountNumber ? 
+          `*Bank Details:*\nAccount: ${user.bankDetails.accountNumber}\nBank: ${user.bankDetails.bankName}\nName: ${user.bankDetails.accountName}` : 
+          'No bank details added yet.'
+        }
       `;
       
       await whatsappService.sendMessage(from, profileMessage);
@@ -247,16 +248,16 @@ ${user.bankDetails.accountNumber ?
       const parts = messageBody.split(' ');
       if (parts.length !== 2) {
         await whatsappService.sendMessage(from, 
-          "Format: /join_group <group_id>\nExample: /join_group 64a1b2c3d4e5f6789012345"
+          "Format: /join_group <group_name>\nExample: /join_group group1"
         );
         return;
       }
 
-      const groupId = parts[1];
-      const group = await Group.findById(groupId);
+      const groupName = parts[1];
+      const group = await Group.findOne({ name: groupName });
 
       if (!group) {
-        await whatsappService.sendMessage(from, "Group not found. Please check the Group ID.");
+        await whatsappService.sendMessage(from, "Group not found. Please check the Group Name.");
         return;
       }
 
@@ -318,29 +319,29 @@ ${user.bankDetails.accountNumber ?
       const parts = messageBody.split(' ');
       if (parts.length !== 2) {
         await whatsappService.sendMessage(from, 
-          "Format: /group_details <group_id>\nExample: /group_details 64a1b2c3d4e5f6789012345"
+          "Format: /group_details <group_name>\nExample: /group_details group1"
         );
         return;
       }
 
-      const groupId = parts[1];
-      const group = await Group.findById(groupId);
+      const groupName = parts[1];
+      const group = await Group.findOne({ name: groupName });
 
       if (!group) {
         await whatsappService.sendMessage(from, "Group not found. Please check the Group ID.");
         return;
       } 
       const detailsMessage = `
-🔍 *Group Details:*
+        🔍 *Group Details:*
 
-*Name:* ${group.name}
-*Contribution Amount:* ₦${group.contributionAmount.toLocaleString()}
-*Max Members:* ${group.maxMembers}
-*Members:* ${group.members.length}/${group.maxMembers}
-*Cycle:* ${group.currentCycle}
-*Started:* ${group.startDate.toDateString()}
+        *Name:* ${group.name}
+        *Contribution Amount:* ₦${group.contributionAmount.toLocaleString()}
+        *Max Members:* ${group.maxMembers}
+        *Members:* ${group.members.length}/${group.maxMembers}
+        *Cycle:* ${group.currentCycle}
+        *Started:* ${group.startDate.toDateString()}
 
-${group.members.map(member => `👤 ${member.user.name} (${member.user.phoneNumber})`).join('\n')}
+        ${group.members.map(member => `👤 ${member.user.name} (${member.user.phoneNumber})`).join('\n')}
       `;
 
       await whatsappService.sendMessage(from, detailsMessage);
@@ -355,20 +356,21 @@ ${group.members.map(member => `👤 ${member.user.name} (${member.user.phoneNumb
       const parts = messageBody.split(' ');
       if (parts.length !== 3) {
         await whatsappService.sendMessage(from, 
-          "Format: /contribute <group_id> <amount>\nExample: /contribute 64a1b2c3d4e5f6789012345 5000"
+          "Format: /contribute <group_name> <amount>\nExample: /contribute group1 5000"
         );
         return;
       }
 
-      const groupId = parts[1];
+      const groupName = parts[1];
       const amount = parseInt(parts[2]);
+      const group = await Group.findOne({ name: groupName });
 
       if (isNaN(amount) || amount <= 0) {
         await whatsappService.sendMessage(from, "Please provide a valid amount.");
         return;
       }
 
-      const result = await thriftService.initiateContribution(user._id, groupId, amount);
+      const result = await thriftService.initiateContribution(user._id, group._id, amount);
       
       if (result.success) {
         await whatsappService.sendMessage(from, result.message);
@@ -429,14 +431,25 @@ ${group.members.map(member => `👤 ${member.user.name} (${member.user.phoneNumb
 
   async handleStatus(from) {
     const statusMessage = `
-🤖 *Bot Status:* Online ✅
-🕐 *Server Time:* ${new Date().toLocaleString()}
-💚 *All systems operational*
+      🤖 *Bot Status:* Online ✅
+      🕐 *Server Time:* ${new Date().toLocaleString()}
+      💚 *All systems operational*
 
-For support, contact our team.
+      For support, contact our team.
     `;
     
     await whatsappService.sendMessage(from, statusMessage);
+  }
+
+  async handleDeveloper(from) {
+    const developerInfo = `
+      👨‍💻 *Developer Information*
+
+      *Name:* Peter Thomas (Techta)
+      *WhatsApp:* +2349066730090
+      *LinkedIn:* https://linkedin.com/in/peterthomas-dev
+    `;
+    await whatsappService.sendMessage(from, developerInfo);
   }
 }
 
