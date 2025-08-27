@@ -10,6 +10,40 @@ const whatsappService = require('../services/whatsappService');
 const logger = require('../utils/logger');
 
 class AdminController {
+  constructor() {
+    // Bind all methods to preserve 'this' context when called from routes
+    this.login = this.login.bind(this);
+    this.logout = this.logout.bind(this);
+    this.getProfile = this.getProfile.bind(this);
+    this.getDashboardMetrics = this.getDashboardMetrics.bind(this);
+    this.getAnalytics = this.getAnalytics.bind(this);
+    this.getRecentActivity = this.getRecentActivity.bind(this);
+    this.getUsers = this.getUsers.bind(this);
+    this.getUserDetails = this.getUserDetails.bind(this);
+    this.updateUser = this.updateUser.bind(this);
+    this.activateUser = this.activateUser.bind(this);
+    this.deactivateUser = this.deactivateUser.bind(this);
+    this.getGroups = this.getGroups.bind(this);
+    this.getGroupDetails = this.getGroupDetails.bind(this);
+    this.getGroupMembers = this.getGroupMembers.bind(this);
+    this.updateGroup = this.updateGroup.bind(this);
+    this.activateGroup = this.activateGroup.bind(this);
+    this.deactivateGroup = this.deactivateGroup.bind(this);
+    this.getTransactions = this.getTransactions.bind(this);
+    this.getTransactionDetails = this.getTransactionDetails.bind(this);
+    this.updateTransactionStatus = this.updateTransactionStatus.bind(this);
+    this.getFinancialReport = this.getFinancialReport.bind(this);
+    this.getUserReport = this.getUserReport.bind(this);
+    this.getGroupReport = this.getGroupReport.bind(this);
+    this.sendBroadcast = this.sendBroadcast.bind(this);
+    this.getMessageTemplates = this.getMessageTemplates.bind(this);
+    this.createMessageTemplate = this.createMessageTemplate.bind(this);
+    this.getSettings = this.getSettings.bind(this);
+    this.updateSettings = this.updateSettings.bind(this);
+    this.exportUsers = this.exportUsers.bind(this);
+    this.exportTransactions = this.exportTransactions.bind(this);
+  }
+
   // Authentication
   async login(req, res) {
     try {
@@ -111,7 +145,7 @@ class AdminController {
               growth: this.calculateGrowth(weeklyContributions.amount, previousWeekContributions.amount)
             },
             monthly: {
-              amount: monthlyContributions.count,
+              amount: monthlyContributions.amount,
               count: monthlyContributions.count,
               growth: this.calculateGrowth(monthlyContributions.amount, previousMonthContributions.amount)
             }
@@ -381,10 +415,10 @@ class AdminController {
       },
       {
         $project: {
-          name: 1,
-          contributionAmount: 1,
+          name: '$name',
+          contributionAmount: '$contributionAmount',
           membersCount: { $size: '$members' },
-          totalContributed: 1
+          totalContributed: '$totalContributed'
         }
       },
       { $sort: { totalContributed: -1 } },
@@ -1155,9 +1189,9 @@ class AdminController {
           },
           {
             $project: {
-              name: 1,
-              email: 1,
-              totalContributions: 1,
+              name: '$name',
+              email: '$email',
+              totalContributions: '$totalContributions',
               contributionsCount: { $size: '$contributions' }
             }
           },
@@ -1240,12 +1274,12 @@ class AdminController {
           },
           {
             $project: {
-              name: 1,
-              contributionAmount: 1,
+              name: '$name',
+              contributionAmount: '$contributionAmount',
               membersCount: { $size: '$members' },
-              totalContributed: 1,
-              contributionRate: 1,
-              currentCycle: 1
+              totalContributed: '$totalContributed',
+              contributionRate: '$contributionRate',
+              currentCycle: '$currentCycle'
             }
           },
           { $sort: { totalContributed: -1 } }
